@@ -74,6 +74,7 @@
             } else {
                 NSLog(@"Anonymous user logged in.");
                 [user incrementKey:@"sessionCount"];
+                user[@"anonymous"] = [NSNumber numberWithBool:YES];
                 [user saveEventually];
             }
             [[NSNotificationCenter defaultCenter] postNotificationName:@"UpdateUI" object:nil];
