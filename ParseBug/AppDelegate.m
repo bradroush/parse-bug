@@ -3,8 +3,12 @@
 //  ParseBug
 //
 //  Created by Brad Roush on 4/9/15.
-//  Copyright (c) 2015 Contail Software, LLC. All rights reserved.
+//  Copyright (c) 2015 Brad Roush All rights reserved.
 //
+
+#import <Parse/Parse.h>
+#import <FBSDKCoreKit/FBSDKCoreKit.h>
+#import <ParseFacebookUtilsV4/PFFacebookUtils.h>
 
 #import "AppDelegate.h"
 
@@ -16,7 +20,11 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    // Override point for customization after application launch.
+    // Initialize Parse.
+    [Parse setApplicationId:@"[ParseAppId]"
+                  clientKey:@"[ParseClientKey]"];
+    [PFFacebookUtils initializeFacebookWithApplicationLaunchOptions:launchOptions];
+    [self startNewSession];
     return YES;
 }
 
@@ -32,14 +40,46 @@
 
 - (void)applicationWillEnterForeground:(UIApplication *)application {
     // Called as part of the transition from the background to the inactive state; here you can undo many of the changes made on entering the background.
+    [self startNewSession];
 }
 
 - (void)applicationDidBecomeActive:(UIApplication *)application {
     // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+    [FBSDKAppEvents activateApp];
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application {
     // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
 }
+
+- (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
+    
+    return [[FBSDKApplicationDelegate sharedInstance] application:application
+                                                   openURL:url
+                                         sourceApplication:sourceApplication
+                                                annotation:annotation];
+}
+
+- (void)startNewSession
+{
+    PFUser *user = [PFUser currentUser];
+    if (user) {
+        [user incrementKey:@"sessionCount"];
+        [user saveEventually];
+        [user fetchInBackground];
+    } else {
+        [PFAnonymousUtils logInWithBlock:^(PFUser *user, NSError *error) {
+            if (error) {
+                NSLog(@"Anonymous login failed.");
+            } else {
+                NSLog(@"Anonymous user logged in.");
+                [user incrementKey:@"sessionCount"];
+                [user saveEventually];
+            }
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"UpdateUI" object:nil];
+        }];
+    }
+}
+
 
 @end
